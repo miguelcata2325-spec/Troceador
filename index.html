@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCADA · Choppers Clase B / C — Panel Industrial</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        /* ==================== RESET Y VARIABLES ==================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-deep: #0a0e14;
+            --bg-panel: #121820;
+            --bg-card: #1a222d;
+            --bg-elevated: #232d3b;
+            --accent: #ff6b35;
+            --accent-soft: #ff8c5a;
+            --accent-glow: rgba(255,107,53,0.4);
+            --blue: #4a9eff;
+            --blue-glow: rgba(74,158,255,0.3);
+            --green: #2dd4a0;
+            --red: #ff4757;
+            --yellow: #ffc048;
+            --text-primary: #e8eef5;
+            --text-secondary: #8a9bb0;
+            --text-muted: #55657a;
+            --border: #2a3645;
+            --border-bright: #3a4a5e;
+            --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+            --font-display: 'Rajdhani', 'Segoe UI', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+        body {
+            background: var(--bg-deep);
+            background-image: 
+                radial-gradient(ellipse at top left, rgba(255,107,53,0.06), transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(74,158,255,0.06), transparent 50%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            font-family: var(--font-display);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* ==================== CONTENEDOR PRINCIPAL ==================== */
+        .scada {
+            width: 1500px;
+            max-width: 100%;
+            background: linear-gradient(145deg, var(--bg-panel) 0%, #0d1319 100%);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow:
+                0 0 0 1px rgba(255,107,53,0.1),
+                0 40px 80px -20px rgba(0,0,0,0.9),
+                inset 0 1px 0 rgba(255,255,255,0.04);
+            padding: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .scada::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--blue), var(--green), var(--accent));
+            background-size: 300% 100%;
+            animation: slideGradient 8s linear infinite;
+        }
+        @keyframes slideGradient {
+            0% { background-position: 0% 0%; }
+            100% { background-position: 300% 0%; }
+        }
+
+        /* ==================== TOPBAR ==================== */
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 28px;
+            background: rgba(0,0,0,0.25);
+            border-bottom: 1px solid var(--border);
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .brand-mark {
+            width: 46px; height: 46px;
+            background: linear-gradient(135deg, var(--accent), #d94d1f);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            box-shadow: 0 0 25px var(--accent-glow);
+            transform: rotate(-3deg);
+        }
+        .brand-text h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+        .brand-text p {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            margin-top: 4px;
+        }
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(45,212,160,0.08);
+            border: 1px solid rgba(45,212,160,0.3);
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--green);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .status-dot {
+            width: 7px; height: 7px;
+            background: var(--green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--green);
+            animation: blink 1.5s ease-in-out infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #d94d1f);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: var(--font-display);
+            font-weight: 600;
+            font-size: 0.82rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(255,107,53,0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(255,107,53,0.5);
+        }
+        .btn-primary:active { transform: translateY(0); }
+
+        /* ==================== SELECTOR DE SISTEMA ==================== */
+        .selector {
+            display: flex;
+            gap: 12px;
+            padding: 20px 28px 12px;
+        }
+        .sys-btn {
+            flex: 1;
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            padding: 18px 22px;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .sys-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,107,53,0.08), transparent);
+            transition: left 0.5s;
+        }
+        .sys-btn:hover::before { left: 100%; }
+        .sys-btn:hover {
+            border-color: var(--accent-soft);
+            background: var(--bg-elevated);
+        }
+        .sys-btn.active {
+            border-color: var(--accent);
+            background: linear-gradient(135deg, rgba(255,107,53,0.12), rgba(255,107,53,0.03));
+            box-shadow: 0 0 0 3px rgba(255,107,53,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .sys-btn .icon {
+            width: 52px; height: 52px;
+            border-radius: 12px;
+            background: rgba(255,107,53,0.1);
+            border: 1px solid rgba(255,107,53,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+        .sys-btn.active .icon {
+            background: rgba(255,107,53,0.2);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+        .sys-btn .info h3 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-primary);
+        }
+        .sys-btn .info p {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        /* ==================== GRID PRINCIPAL ==================== */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr 1fr;
+            gap: 16px;
+            padding: 16px 28px 24px;
+        }
+
+        /* ---- TARJETAS BASE ---- */
+        .card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 20px; right: 20px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-bright), transparent);
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 20px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border);
+        }
+        .card-header i {
+            color: var(--accent);
+            font-size: 0.95rem;
+        }
+        .card-header h2 {
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+        .card-header .tag {
+            margin-left: auto;
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(74,158,255,0.1);
+            color: var(--blue);
+            border: 1px solid rgba(74,158,255,0.25);
+            letter-spacing: 1px;
+        }
+
+        /* ---- DIAGRAMA DE POTENCIA ---- */
+        .circuit-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            min-height: 340px;
+            background: radial-gradient(circle at center, rgba(255,107,53,0.03), transparent 70%);
+        }
+        .circuit-svg { width: 100%; max-width: 480px; height: auto; }
+
+        .concept {
+            margin: 0 16px 16px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 12px 16px;
+            border-left: 3px solid var(--accent);
+        }
+        .concept-label {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--accent);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .concept p {
+            font-size: 0.82rem;
+            line-height: 1.55;
+            color: var(--text-secondary);
+        }
+        .concept strong { color: var(--text-primary); }
+        .concept .formula {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            background: rgba(255,107,53,0.1);
+            color: var(--accent-soft);
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 2px 0;
+        }
+
+        /* ---- CUADRANTE ---- */
+        .quadrant-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            min-height: 340px;
+            background: radial-gradient(circle at center, rgba(74,158,255,0.03), transparent 70%);
+        }
+        .quadrant-svg { width: 100%; max-width: 300px; height: auto; }
+
+        /* ---- PANEL DE CONTROL ---- */
+        .control-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+
+        .ctrl-group {
+            background: rgba(0,0,0,0.25);
+            border-radius: 12px;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+        }
+        .ctrl-group-title {
+            font-family: var(--font-mono);
+            font-size: 0.63rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .ctrl-group-title i { color: var(--accent); }
+
+        .ctrl-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .ctrl-row:last-child { margin-bottom: 0; }
+        .ctrl-row .label {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            min-width: 52px;
+            letter-spacing: 0.5px;
+        }
+        .ctrl-row .label b {
+            color: var(--accent);
+            font-size: 0.85rem;
+        }
+
+        input[type=range] {
+            flex: 1;
+            -webkit-appearance: none;
+            background: transparent;
+            height: 4px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-top: -5.5px;
+            box-shadow: 0 0 12px var(--accent-glow);
+            border: 2px solid #fff;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 18px var(--accent);
+        }
+
+        .num-field {
+            display: flex;
+            align-items: center;
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 4px 8px;
+            min-width: 68px;
+            transition: 0.15s;
+        }
+        .num-field:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(255,107,53,0.15);
+        }
+        .num-field input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            font-weight: 600;
+            width: 100%;
+            text-align: right;
+            -moz-appearance: textfield;
+        }
+        .num-field input::-webkit-outer-spin-button,
+        .num-field input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .num-field .unit {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-left: 5px;
+        }
+
+        /* ---- INDICADORES ---- */
+        .readouts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .readout {
+            background: linear-gradient(145deg, var(--bg-elevated), var(--bg-card));
+            border-radius: 12px;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+        .readout::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 3px; height: 100%;
+            background: var(--accent);
+        }
+        .readout.blue::before { background: var(--blue); }
+        .readout.green::before { background: var(--green); }
+        .readout.yellow::before { background: var(--yellow); }
+
+        .readout .rl {
+            font-family: var(--font-mono);
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .readout .rv {
+            font-family: var(--font-mono);
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .readout .rv .u {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        /* ==================== PANEL DE CÁLCULOS ==================== */
+        .calc-drawer {
+            position: fixed;
+            top: 0; right: 0;
+            width: 500px;
+            max-width: 95vw;
+            height: 100vh;
+            background: linear-gradient(180deg, #0d1319, var(--bg-panel));
+            border-left: 1px solid var(--border);
+            box-shadow: -30px 0 80px rgba(0,0,0,0.9);
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 24px;
+        }
+        .calc-drawer.open { transform: translateX(0); }
+        .calc-drawer::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 3px; height: 100%;
+            background: linear-gradient(180deg, var(--accent), var(--blue), var(--green));
+        }
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .drawer-header h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .drawer-header h2 i { color: var(--accent); }
+        .close-btn {
+            width: 36px; height: 36px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .close-btn:hover { background: var(--red); color: white; border-color: var(--red); }
+
+        .calc-block {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--blue);
+            position: relative;
+        }
+        .calc-block.power { border-left-color: var(--green); }
+        .calc-block .cb-title {
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            color: var(--blue);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .calc-block.power .cb-title { color: var(--green); }
+        .calc-block .cb-formula {
+            background: var(--bg-deep);
+            border-radius: 8px;
+            padding: 12px 10px;
+            text-align: center;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+        }
+        .calc-block .cb-formula mjx-container { color: var(--text-primary) !important; }
+        .calc-block .cb-formula mjx-container svg { fill: var(--text-primary); }
+        .calc-block .cb-note {
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            background: rgba(74,158,255,0.05);
+            border-radius: 6px;
+            border-left: 2px solid var(--blue);
+            font-style: italic;
+        }
+        .calc-block .cb-note i { color: var(--blue); font-style: normal; margin-right: 3px; }
+        .calc-block .cb-subs {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            background: var(--bg-deep);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+        .calc-block .cb-result {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 8px;
+            border-top: 1px dashed var(--border);
+        }
+        .calc-block .cb-result .lbl {
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            color: var(--text-muted);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+        .calc-block .cb-result .val {
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--green);
+            text-shadow: 0 0 12px rgba(45,212,160,0.4);
+        }
+        .calc-block.power .cb-result .val {
+            color: var(--yellow);
+            text-shadow: 0 0 12px rgba(255,192,72,0.4);
+        }
+
+        /* ==================== OVERLAY ==================== */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 999;
+        }
+        .overlay.show { opacity: 1; pointer-events: auto; }
+
+        /* ==================== FOOTER ==================== */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 28px;
+            background: rgba(0,0,0,0.3);
+            border-top: 1px solid var(--border);
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+        .footer .val { color: var(--accent); font-weight: 600; }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 1200px) {
+            .main-grid { grid-template-columns: 1fr 1fr; }
+            .control-card { grid-column: 1 / -1; }
+        }
+        @media (max-width: 800px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .selector { flex-direction: column; }
+            .topbar { flex-direction: column; gap: 12px; align-items: stretch; }
+            .topbar-right { justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="scada">
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <div class="brand">
+            <div class="brand-mark"><i class="fas fa-bolt"></i></div>
+            <div class="brand-text">
+                <h1>CHOPPER CONTROL</h1>
+                <p>SCADA · SISTEMA DE TROCEADORES</p>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <div class="status-pill">
+                <span class="status-dot"></span>
+                <span>OPERATIVO</span>
+            </div>
+            <button class="btn-primary" id="btnCalc" onclick="toggleCalcDrawer()">
+                <i class="fas fa-calculator"></i> Cálculos
+            </button>
+        </div>
+    </div>
+
+    <!-- SELECTOR DE SISTEMA -->
+    <div class="selector">
+        <div class="sys-btn active" id="cardB" onclick="selectSystem('B')">
+            <div class="icon"><i class="fas fa-microchip"></i></div>
+            <div class="info">
+                <h3>Chopper Clase B</h3>
+                <p id="infoB">120V / 50V · 10mH · 0.25Ω</p>
+            </div>
+        </div>
+        <div class="sys-btn" id="cardC" onclick="selectSystem('C')">
+            <div class="icon"><i class="fas fa-wave-square"></i></div>
+            <div class="info">
+                <h3>Chopper Clase C</h3>
+                <p id="infoC">120V / 50V · 10mH · 0.25Ω</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- GRID PRINCIPAL -->
+    <div class="main-grid">
+        <!-- DIAGRAMA -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-project-diagram"></i>
+                <h2>Diagrama de Potencia</h2>
+                <span class="tag" id="tagCircuit">CLASE B</span>
+            </div>
+            <div class="circuit-area" id="circuitArea"></div>
+            <div class="concept" id="conceptBox"></div>
+        </div>
+
+        <!-- CUADRANTE -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-line"></i>
+                <h2>Cuadrante Vo–io</h2>
+                <span class="tag" id="tagQuadrant">CLASE B</span>
+            </div>
+            <div class="quadrant-area" id="quadrantArea"></div>
+        </div>
+
+        <!-- CONTROL -->
+        <div class="card control-card">
+            <div class="card-header">
+                <i class="fas fa-sliders-h"></i>
+                <h2>Control y Medición</h2>
+            </div>
+            <div class="control-body">
+                <!-- MODULACIÓN -->
+                <div class="ctrl-group">
+                    <div class="ctrl-group-title"><i class="fas fa-wave-square"></i> MODULACIÓN</div>
+                    <div class="ctrl-row">
+                        <span class="label"><b>D</b></span>
+                        <input type="range" id="dutySlider" min="5" max="95" value="50" step="1">
+                        <div class="num-field">
+                            <input type="number" id="dutyInput" min="5" max="95" step="1" value="50">
+                            <span class="unit">%</span>
+                        </div>
+                    </div>
+                    <div class="ctrl-row">
+                        <span class="label"><b>f</b></span>
+                        <input type="range" id="freqSlider" min="1" max="20" value="10" step="0.5">
+                        <div class="num-field">
+                            <input type="number" id="freqInput" min="1" max="20" step="0.5" value="10">
+                            <span class="unit">kHz</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PARÁMETROS -->
+                <div class="ctrl-group">
+                    <div class="ctrl-group-title"><i class="fas fa-cogs"></i> PARÁMETROS DEL CIRCUITO</div>
+                    <div class="ctrl-row">
+                        <span class="label"><b>V</b></span>
+                        <input type="range" id="vSourceSlider" min="12" max="240" value="120" step="1">
+                        <div class="num-field">
+                            <input type="number" id="vSourceInput" min="12" max="240" step="1" value="120">
+                            <span class="unit">V</span>
+                        </div>
+                    </div>
+                    <div class="ctrl-row">
+                        <span class="label"><b>Vc</b></span>
+                        <input type="range" id="vBatSlider" min="5" max="150" value="50" step="1">
+                        <div class="num-field">
+                            <input type="number" id="vBatInput" min="5" max="150" step="1" value="50">
+                            <span class="unit">V</span>
+                        </div>
+                    </div>
+                    <div class="ctrl-row">
+                        <span class="label"><b>L</b></span>
+                        <input type="range" id="indSlider" min="1" max="100" value="10" step="1">
+                        <div class="num-field">
+                            <input type="number" id="indInput" min="1" max="100" step="1" value="10">
+                            <span class="unit">mH</span>
+                        </div>
+                    </div>
+                    <div class="ctrl-row">
+                        <span class="label"><b>R</b></span>
+                        <input type="range" id="resSlider" min="1" max="200" value="25" step="1">
+                        <div class="num-field">
+                            <input type="number" id="resInput" min="0.01" max="2" step="0.01" value="0.25">
+                            <span class="unit">Ω</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- READOUTS -->
+                <div class="readouts">
+                    <div class="readout">
+                        <div class="rl">Tensión Salida</div>
+                        <div class="rv" id="voutDisplay">60.0<span class="u">V</span></div>
+                    </div>
+                    <div class="readout blue">
+                        <div class="rl">Corriente Carga</div>
+                        <div class="rv" id="ioutDisplay">40.0<span class="u">A</span></div>
+                    </div>
+                    <div class="readout green">
+                        <div class="rl">Potencia Carga</div>
+                        <div class="rv" id="poutDisplay">2400<span class="u">W</span></div>
+                    </div>
+                    <div class="readout yellow">
+                        <div class="rl">Rizado ΔV</div>
+                        <div class="rv" id="rippleDisplay">0.12<span class="u">V</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <span><i class="fas fa-microchip"></i> SISTEMA ACTIVO: <span class="val" id="activeSysLabel">CHOPPER CLASE B</span></span>
+        <span><i class="fas fa-clock"></i> ÚLTIMA ACTUALIZACIÓN: <span class="val" id="timestamp">--:--:--</span></span>
+    </div>
+</div>
+
+<!-- OVERLAY Y DRAWER -->
+<div class="overlay" id="overlay" onclick="toggleCalcDrawer()"></div>
+
+<div class="calc-drawer" id="calcDrawer">
+    <div class="drawer-header">
+        <h2><i class="fas fa-calculator"></i> Cálculos</h2>
+        <button class="close-btn" onclick="toggleCalcDrawer()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="calc-block">
+        <div class="cb-title"><i class="fas fa-percent"></i> Ciclo de Trabajo (D)</div>
+        <div class="cb-formula">$$D = \frac{t_{on}}{T}$$</div>
+        <div class="cb-note"><i class="fas fa-info-circle"></i> Fracción del período en que el interruptor conduce y la fuente entrega energía a la carga.</div>
+        <div class="cb-subs" id="subD">D = 50% = 0.50</div>
+        <div class="cb-result"><span class="lbl">Resultado</span><span class="val" id="resD">0.50</span></div>
+    </div>
+
+    <div class="calc-block">
+        <div class="cb-title"><i class="fas fa-bolt"></i> Tensión Promedio Salida (Vo)</div>
+        <div class="cb-formula" id="fVo">$$V_o = D \cdot V$$</div>
+        <div class="cb-note"><i class="fas fa-info-circle"></i> Tensión media aplicada a la carga. Proporcional al ciclo de trabajo D.</div>
+        <div class="cb-subs" id="subVo">Vo = 0.50 · 120 = 60.0 V</div>
+        <div class="cb-result"><span class="lbl">Resultado</span><span class="val" id="resVo">60.0 V</span></div>
+    </div>
+
+    <div class="calc-block">
+        <div class="cb-title"><i class="fas fa-wave-square"></i> Corriente de Rizado (ΔI)</div>
+        <div class="cb-formula" id="fRip">$$\Delta I = \frac{V \cdot D \cdot (1-D)}{f \cdot L}$$</div>
+        <div class="cb-note"><i class="fas fa-info-circle"></i> Variación pico-a-pico de la corriente en el inductor. Disminuye al aumentar f o L.</div>
+        <div class="cb-subs" id="subRip">ΔI = (120 · 0.5 · 0.5) / (10000 · 0.01) = 0.30 A</div>
+        <div class="cb-result"><span class="lbl">Resultado</span><span class="val" id="resRip">0.30 A</span></div>
+    </div>
+
+    <div class="calc-block">
+        <div class="cb-title"><i class="fas fa-battery-half"></i> Corriente Media Carga (Io)</div>
+        <div class="cb-formula">$$I_o = \frac{V_o - V_c}{R}$$</div>
+        <div class="cb-note"><i class="fas fa-info-circle"></i> Corriente real con carga activa (R + Vc). Si Vo ≤ Vc no hay conducción.</div>
+        <div class="cb-subs" id="subIo">Io = (60.0 − 50) / 0.25 = 40.0 A</div>
+        <div class="cb-result"><span class="lbl">Resultado</span><span class="val" id="resIo">40.0 A</span></div>
+    </div>
+
+    <div class="calc-block power">
+        <div class="cb-title"><i class="fas fa-plug"></i> Potencia Total Carga (Po)</div>
+        <div class="cb-formula">$$P_o = V_o \cdot I_o$$</div>
+        <div class="cb-note"><i class="fas fa-info-circle"></i> Potencia total entregada a la carga activa (R + Vc).</div>
+        <div class="cb-subs" id="subPo">Po = 60.0 · 40.0 = 2400 W</div>
+        <div class="cb-result"><span class="lbl">Resultado</span><span class="val" id="resPo">2400 W</span></div>
+    </div>
+
+    <div class="calc-block power">
+        <div class="cb-title"><i class="fas fa-fire"></i> Potencia Disipada en R (P<sub>R</sub>)</div>
+        <div class="cb-formula">$$P_R = I_o^2 \cdot R$$</div>
+        <div class="cb-note"><i class="fas fa-info-circle"></i> Potencia disipada como calor en la resistencia. Depende del cuadrado de Io.</div>
+        <div class="cb-subs" id="subPR">PR = 40.0² · 0.25 = 400 W</div>
+        <div class="cb-result"><span class="lbl">Resultado</span><span class="val" id="resPR">400 W</span></div>
+    </div>
+
+    <div class="calc-block power">
+        <div class="cb-title"><i class="fas fa-car-battery"></i> Potencia Absorbida Vc (P<sub>Vc</sub>)</div>
+        <div class="cb-formula">$$P_{Vc} = V_c \cdot I_o$$</div>
+        <div class="cb-note"><i class="fas fa-info-circle"></i> Potencia absorbida por la batería (carga activa). Positiva si Io > 0.</div>
+        <div class="cb-subs" id="subPVc">PVc = 50 · 40.0 = 2000 W</div>
+        <div class="cb-result"><span class="lbl">Resultado</span><span class="val" id="resPVc">2000 W</span></div>
+    </div>
+</div>
+
+<script>
+    // ==================== ESTADO ====================
+    let currentSystem = 'B';
+    let duty = 0.5, freq = 10, vSource = 120, vBat = 50, inductance = 10, resistance = 0.25;
+
+    const pairs = {
+        duty:      { slider: document.getElementById('dutySlider'),      input: document.getElementById('dutyInput'),      min: 5,   max: 95,  step: 1,    scale: 1 },
+        freq:      { slider: document.getElementById('freqSlider'),      input: document.getElementById('freqInput'),      min: 1,   max: 20,  step: 0.5,  scale: 1 },
+        vSource:   { slider: document.getElementById('vSourceSlider'),   input: document.getElementById('vSourceInput'),   min: 12,  max: 240, step: 1,    scale: 1 },
+        vBat:      { slider: document.getElementById('vBatSlider'),      input: document.getElementById('vBatInput'),      min: 5,   max: 150, step: 1,    scale: 1 },
+        inductance:{ slider: document.getElementById('indSlider'),       input: document.getElementById('indInput'),       min: 1,   max: 100, step: 1,    scale: 1 },
+        resistance:{ slider: document.getElementById('resSlider'),       input: document.getElementById('resInput'),       min: 0.01,max: 2,   step: 0.01, scale: 100 }
+    };
+
+    const $ = id => document.getElementById(id);
+    const voutDisplay = $('voutDisplay'), ioutDisplay = $('ioutDisplay');
+    const poutDisplay = $('poutDisplay'), rippleDisplay = $('rippleDisplay');
+    const activeSysLabel = $('activeSysLabel'), timestamp = $('timestamp');
+    const circuitArea = $('circuitArea'), quadrantArea = $('quadrantArea');
+    const conceptBox = $('conceptBox'), tagCircuit = $('tagCircuit'), tagQuadrant = $('tagQuadrant');
+    const cardB = $('cardB'), cardC = $('cardC'), infoB = $('infoB'), infoC = $('infoC');
+    const calcDrawer = $('calcDrawer'), overlay = $('overlay');
+
+    // ==================== CUADRANTE ====================
+    function quadrantB() {
+        return `
+        <svg class="quadrant-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="gB" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ff6b35"/>
+                    <stop offset="100%" stop-color="#b91c1c"/>
+                </linearGradient>
+                <filter id="glowB" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="4" result="b"/>
+                    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+            </defs>
+            <g opacity="0.07" stroke="#8a9bb0" stroke-width="1">
+                <line x1="40" y1="20" x2="40" y2="260"/><line x1="90" y1="20" x2="90" y2="260"/>
+                <line x1="140" y1="20" x2="140" y2="260"/><line x1="190" y1="20" x2="190" y2="260"/>
+                <line x1="240" y1="20" x2="240" y2="260"/>
+                <line x1="20" y1="40" x2="280" y2="40"/><line x1="20" y1="90" x2="280" y2="90"/>
+                <line x1="20" y1="140" x2="280" y2="140"/><line x1="20" y1="190" x2="280" y2="190"/>
+                <line x1="20" y1="240" x2="280" y2="240"/>
+            </g>
+            <line x1="20" y1="170" x2="280" y2="170" stroke="#4a9eff" stroke-width="6" opacity="0.2"/>
+            <line x1="20" y1="170" x2="275" y2="170" stroke="#e8eef5" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="285,170 272,163 272,177" fill="#e8eef5"/>
+            <line x1="90" y1="280" x2="90" y2="20" stroke="#4a9eff" stroke-width="6" opacity="0.2"/>
+            <line x1="90" y1="280" x2="90" y2="25" stroke="#e8eef5" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="90,15 83,28 97,28" fill="#e8eef5"/>
+            <rect x="30" y="80" width="60" height="90" fill="url(#gB)" stroke="#7f1d1d" stroke-width="2" filter="url(#glowB)" rx="3"/>
+            <text x="250" y="195" fill="#ff6b35" font-size="14" font-weight="bold" font-family="Georgia, serif" font-style="italic">io(t)</text>
+            <text x="95" y="40" fill="#ff6b35" font-size="14" font-weight="bold" font-family="Georgia, serif" font-style="italic">Vo(t)</text>
+            <text x="170" y="272" fill="#4a9eff" font-size="15" font-weight="bold" text-anchor="middle" letter-spacing="3">CLASE B</text>
+            <text x="60" y="130" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle" font-family="Georgia, serif" font-style="italic">II</text>
+        </svg>`;
+    }
+
+    function quadrantC() {
+        return `
+        <svg class="quadrant-svg" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <linearGradient id="gC" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ff6b35"/>
+                    <stop offset="100%" stop-color="#b91c1c"/>
+                </linearGradient>
+                <filter id="glowC" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="4" result="b"/>
+                    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+                <marker id="arR" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+                    <polygon points="0,0 7,3.5 0,7" fill="#fff"/>
+                </marker>
+                <marker id="arL" markerWidth="7" markerHeight="7" refX="2" refY="3.5" orient="auto">
+                    <polygon points="7,0 0,3.5 7,7" fill="#fff"/>
+                </marker>
+            </defs>
+            <g opacity="0.07" stroke="#8a9bb0" stroke-width="1">
+                <line x1="40" y1="20" x2="40" y2="260"/><line x1="90" y1="20" x2="90" y2="260"/>
+                <line x1="140" y1="20" x2="140" y2="260"/><line x1="190" y1="20" x2="190" y2="260"/>
+                <line x1="240" y1="20" x2="240" y2="260"/>
+                <line x1="20" y1="40" x2="280" y2="40"/><line x1="20" y1="90" x2="280" y2="90"/>
+                <line x1="20" y1="140" x2="280" y2="140"/><line x1="20" y1="190" x2="280" y2="190"/>
+                <line x1="20" y1="240" x2="280" y2="240"/>
+            </g>
+            <line x1="20" y1="170" x2="280" y2="170" stroke="#4a9eff" stroke-width="6" opacity="0.2"/>
+            <line x1="20" y1="170" x2="275" y2="170" stroke="#e8eef5" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="285,170 272,163 272,177" fill="#e8eef5"/>
+            <line x1="90" y1="280" x2="90" y2="20" stroke="#4a9eff" stroke-width="6" opacity="0.2"/>
+            <line x1="90" y1="280" x2="90" y2="25" stroke="#e8eef5" stroke-width="2.5" stroke-linecap="round"/>
+            <polygon points="90,15 83,28 97,28" fill="#e8eef5"/>
+            <rect x="90" y="80" width="60" height="90" fill="url(#gC)" stroke="#7f1d1d" stroke-width="2" filter="url(#glowC)" rx="3"/>
+            <rect x="30" y="80" width="60" height="90" fill="url(#gC)" stroke="#7f1d1d" stroke-width="2" filter="url(#glowC)" rx="3"/>
+            <path d="M 95 130 L 145 130" stroke="#fff" stroke-width="2" marker-end="url(#arR)"/>
+            <path d="M 85 130 L 35 130" stroke="#fff" stroke-width="2" marker-end="url(#arL)"/>
+            <text x="250" y="195" fill="#ff6b35" font-size="14" font-weight="bold" font-family="Georgia, serif" font-style="italic">io(t)</text>
+            <text x="95" y="40" fill="#ff6b35" font-size="14" font-weight="bold" font-family="Georgia, serif" font-style="italic">Vo(t)</text>
+            <text x="170" y="272" fill="#4a9eff" font-size="15" font-weight="bold" text-anchor="middle" letter-spacing="3">CLASE C</text>
+            <text x="120" y="130" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle" font-family="Georgia, serif" font-style="italic">I</text>
+            <text x="60" y="130" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle" font-family="Georgia, serif" font-style="italic">II</text>
+        </svg>`;
+    }
+
+    // ==================== CIRCUITOS ====================
+    function circuitB() {
+        const vStr = vSource, vcStr = vBat + 'V';
+        const lStr = inductance + 'mH';
+        const rStr = resistance < 1 ? resistance.toFixed(2) : resistance.toString();
+        return `
+        <svg class="circuit-svg" viewBox="0 0 560 340" xmlns="http://www.w3.org/2000/svg">
+            <line x1="60" y1="60" x2="60" y2="280" stroke="#4a9eff" stroke-width="3" />
+            <line x1="48" y1="150" x2="72" y2="150" stroke="#e8eef5" stroke-width="2" />
+            <line x1="52" y1="162" x2="68" y2="162" stroke="#e8eef5" stroke-width="1.8" />
+            <line x1="48" y1="174" x2="72" y2="174" stroke="#e8eef5" stroke-width="2" />
+            <line x1="52" y1="186" x2="68" y2="186" stroke="#e8eef5" stroke-width="1.8" />
+            <text x="22" y="168" fill="#e8eef5" font-size="13" font-weight="bold">V</text>
+            <text x="22" y="182" fill="#8a9bb0" font-size="11">${vStr}</text>
+            <line x1="60" y1="60" x2="210" y2="60" stroke="#4a9eff" stroke-width="3" />
+            <circle cx="210" cy="60" r="3.5" fill="#ff6b35" />
+            <line x1="210" y1="60" x2="210" y2="90" stroke="#4a9eff" stroke-width="3" />
+            <polygon points="198,90 222,90 210,112" fill="#1a222d" stroke="#e8eef5" stroke-width="2" stroke-linejoin="round" />
+            <line x1="198" y1="112" x2="222" y2="112" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="210" y1="112" x2="210" y2="145" stroke="#4a9eff" stroke-width="3" />
+            <text x="232" y="95" fill="#4a9eff" font-size="13" font-weight="bold">D</text>
+            <text x="232" y="112" fill="#55657a" font-size="11">Dbreak</text>
+            <circle cx="210" cy="145" r="4" fill="#ff6b35" />
+            <line x1="210" y1="145" x2="210" y2="200" stroke="#4a9eff" stroke-width="3" />
+            <line x1="190" y1="200" x2="230" y2="200" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="210" y1="200" x2="210" y2="240" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="195" y1="215" x2="225" y2="215" stroke="#e8eef5" stroke-width="2.5" />
+            <polygon points="205,225 215,225 210,235" fill="#e8eef5" />
+            <text x="238" y="205" fill="#4a9eff" font-size="13" font-weight="bold">Q</text>
+            <text x="238" y="222" fill="#55657a" font-size="11">CM600HA-28H</text>
+            <line x1="210" y1="240" x2="210" y2="280" stroke="#4a9eff" stroke-width="3" />
+            <line x1="210" y1="145" x2="330" y2="145" stroke="#4a9eff" stroke-width="3" />
+            <path d="M330 145 Q342 125 354 145 Q366 165 378 145 Q390 125 402 145 Q414 165 426 145" fill="none" stroke="#e8eef5" stroke-width="3" stroke-linecap="round" />
+            <text x="378" y="118" fill="#4a9eff" font-size="14" font-weight="bold" text-anchor="middle">L</text>
+            <text x="378" y="180" fill="#55657a" font-size="12" text-anchor="middle">${lStr}</text>
+            <line x1="426" y1="145" x2="450" y2="145" stroke="#4a9eff" stroke-width="3" />
+            <rect x="450" y="132" width="44" height="26" fill="#1a222d" stroke="#e8eef5" stroke-width="2" rx="2" />
+            <text x="472" y="126" fill="#4a9eff" font-size="13" font-weight="bold" text-anchor="middle">R</text>
+            <text x="472" y="150" fill="#55657a" font-size="11" text-anchor="middle">${rStr}</text>
+            <line x1="494" y1="145" x2="520" y2="145" stroke="#4a9eff" stroke-width="3" />
+            <line x1="520" y1="145" x2="520" y2="180" stroke="#4a9eff" stroke-width="3" />
+            <line x1="504" y1="180" x2="536" y2="180" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="510" y1="192" x2="530" y2="192" stroke="#e8eef5" stroke-width="2" />
+            <line x1="504" y1="204" x2="536" y2="204" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="510" y1="216" x2="530" y2="216" stroke="#e8eef5" stroke-width="2" />
+            <line x1="520" y1="216" x2="520" y2="280" stroke="#4a9eff" stroke-width="3" />
+            <text x="542" y="188" fill="#4a9eff" font-size="13" font-weight="bold">Vc</text>
+            <text x="542" y="205" fill="#55657a" font-size="11">${vcStr}</text>
+            <line x1="60" y1="280" x2="520" y2="280" stroke="#4a9eff" stroke-width="3" />
+            <line x1="280" y1="280" x2="280" y2="298" stroke="#4a9eff" stroke-width="3" />
+            <line x1="262" y1="298" x2="298" y2="298" stroke="#4a9eff" stroke-width="2.5" />
+            <line x1="268" y1="305" x2="292" y2="305" stroke="#4a9eff" stroke-width="2" />
+            <line x1="274" y1="312" x2="286" y2="312" stroke="#4a9eff" stroke-width="2" />
+            <text x="280" y="30" fill="#ff6b35" font-size="14" font-weight="bold" text-anchor="middle" letter-spacing="3">CHOPPER CLASE B</text>
+        </svg>`;
+    }
+
+    function circuitC() {
+        const vStr = vSource, vcStr = vBat + 'V';
+        const lStr = inductance + 'mH';
+        const rStr = resistance < 1 ? resistance.toFixed(2) : resistance.toString();
+        return `
+        <svg class="circuit-svg" viewBox="0 0 700 460" xmlns="http://www.w3.org/2000/svg">
+            <text x="350" y="30" fill="#ff6b35" font-size="14" font-weight="bold" text-anchor="middle" letter-spacing="3">CHOPPER CLASE C</text>
+            <line x1="70" y1="80" x2="70" y2="400" stroke="#4a9eff" stroke-width="3" />
+            <line x1="52" y1="230" x2="88" y2="230" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="58" y1="242" x2="82" y2="242" stroke="#e8eef5" stroke-width="2" />
+            <line x1="52" y1="254" x2="88" y2="254" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="58" y1="266" x2="82" y2="266" stroke="#e8eef5" stroke-width="2" />
+            <text x="28" y="245" fill="#e8eef5" font-size="14" font-weight="bold">V</text>
+            <text x="28" y="262" fill="#8a9bb0" font-size="12">${vStr}</text>
+            <line x1="70" y1="80" x2="280" y2="80" stroke="#4a9eff" stroke-width="3" />
+            <circle cx="280" cy="80" r="4" fill="#ff6b35" />
+            <line x1="280" y1="80" x2="400" y2="80" stroke="#4a9eff" stroke-width="3" />
+            <circle cx="400" cy="80" r="4" fill="#ff6b35" />
+            <line x1="280" y1="80" x2="280" y2="150" stroke="#4a9eff" stroke-width="3" />
+            <line x1="258" y1="150" x2="302" y2="150" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="280" y1="150" x2="280" y2="185" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="263" y1="167" x2="297" y2="167" stroke="#e8eef5" stroke-width="2.5" />
+            <polygon points="274,177 286,177 280,187" fill="#e8eef5" />
+            <text x="310" y="155" fill="#4a9eff" font-size="13" font-weight="bold">Q</text>
+            <text x="310" y="172" fill="#55657a" font-size="10">CM600HA-28H</text>
+            <line x1="280" y1="187" x2="280" y2="250" stroke="#4a9eff" stroke-width="3" />
+            <circle cx="280" cy="230" r="4" fill="#ff6b35" />
+            <line x1="258" y1="250" x2="302" y2="250" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="280" y1="250" x2="280" y2="285" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="263" y1="267" x2="297" y2="267" stroke="#e8eef5" stroke-width="2.5" />
+            <polygon points="274,277 286,277 280,287" fill="#e8eef5" />
+            <text x="310" y="255" fill="#4a9eff" font-size="13" font-weight="bold">Q</text>
+            <text x="310" y="272" fill="#55657a" font-size="10">CM600HA-28H</text>
+            <line x1="280" y1="287" x2="280" y2="400" stroke="#4a9eff" stroke-width="3" />
+            <line x1="280" y1="230" x2="400" y2="230" stroke="#4a9eff" stroke-width="3" />
+            <circle cx="400" cy="230" r="4" fill="#ff6b35" />
+            <line x1="400" y1="230" x2="500" y2="230" stroke="#4a9eff" stroke-width="3" />
+            <line x1="400" y1="80" x2="400" y2="150" stroke="#4a9eff" stroke-width="3" />
+            <polygon points="388,170 412,170 400,148" fill="#1a222d" stroke="#e8eef5" stroke-width="2" stroke-linejoin="round" />
+            <line x1="388" y1="148" x2="412" y2="148" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="400" y1="170" x2="400" y2="230" stroke="#4a9eff" stroke-width="3" />
+            <text x="420" y="155" fill="#4a9eff" font-size="13" font-weight="bold">D</text>
+            <text x="420" y="172" fill="#55657a" font-size="10">Dbreak</text>
+            <line x1="400" y1="230" x2="400" y2="300" stroke="#4a9eff" stroke-width="3" />
+            <polygon points="388,320 412,320 400,298" fill="#1a222d" stroke="#e8eef5" stroke-width="2" stroke-linejoin="round" />
+            <line x1="388" y1="298" x2="412" y2="298" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="400" y1="320" x2="400" y2="400" stroke="#4a9eff" stroke-width="3" />
+            <text x="420" y="305" fill="#4a9eff" font-size="13" font-weight="bold">D</text>
+            <text x="420" y="322" fill="#55657a" font-size="10">Dbreak</text>
+            <path d="M500 230 Q512 210 524 230 Q536 250 548 230 Q560 210 572 230 Q584 250 596 230" fill="none" stroke="#e8eef5" stroke-width="3" stroke-linecap="round" />
+            <text x="548" y="205" fill="#4a9eff" font-size="14" font-weight="bold" text-anchor="middle">L</text>
+            <text x="548" y="268" fill="#55657a" font-size="12" text-anchor="middle">${lStr}</text>
+            <line x1="596" y1="230" x2="596" y2="270" stroke="#4a9eff" stroke-width="3" />
+            <rect x="578" y="270" width="36" height="26" fill="#1a222d" stroke="#e8eef5" stroke-width="2" rx="2" />
+            <text x="596" y="264" fill="#4a9eff" font-size="13" font-weight="bold" text-anchor="middle">R</text>
+            <text x="596" y="288" fill="#55657a" font-size="11" text-anchor="middle">${rStr}</text>
+            <line x1="596" y1="296" x2="596" y2="330" stroke="#4a9eff" stroke-width="3" />
+            <line x1="580" y1="330" x2="612" y2="330" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="586" y1="342" x2="606" y2="342" stroke="#e8eef5" stroke-width="2" />
+            <line x1="580" y1="354" x2="612" y2="354" stroke="#e8eef5" stroke-width="2.5" />
+            <line x1="586" y1="366" x2="606" y2="366" stroke="#e8eef5" stroke-width="2" />
+            <text x="625" y="342" fill="#4a9eff" font-size="14" font-weight="bold">Vc</text>
+            <text x="625" y="360" fill="#8a9bb0" font-size="12">${vcStr}</text>
+            <line x1="596" y1="366" x2="596" y2="400" stroke="#4a9eff" stroke-width="3" />
+            <line x1="70" y1="400" x2="596" y2="400" stroke="#4a9eff" stroke-width="3" />
+            <line x1="340" y1="400" x2="340" y2="420" stroke="#4a9eff" stroke-width="3" />
+            <line x1="320" y1="420" x2="360" y2="420" stroke="#4a9eff" stroke-width="2.5" />
+            <line x1="328" y1="428" x2="352" y2="428" stroke="#4a9eff" stroke-width="2" />
+            <line x1="335" y1="436" x2="345" y2="436" stroke="#4a9eff" stroke-width="2" />
+        </svg>`;
+    }
+
+    // ==================== CONCEPTOS ====================
+    function conceptB() {
+        return `
+            <div class="concept-label">◆ CONCEPTO · CHOPPER CLASE B</div>
+            <p>
+                Chopper de <strong>dos cuadrantes</strong> con <strong>carga activa</strong>. El transistor Q conmuta la energía 
+                desde la fuente V hacia la carga, mientras que el <strong>diodo Dbreak</strong> permite la recuperación de energía 
+                cuando la corriente de carga se invierte. La batería Vc modela la <strong>fuerza contraelectromotriz</strong>.
+                <br>
+                <span class="formula">Vo = D · V</span> &nbsp;
+                <span class="formula">io puede ser + o −</span>
+            </p>`;
+    }
+
+    function conceptC() {
+        return `
+            <div class="concept-label">◆ CONCEPTO · CHOPPER CLASE C</div>
+            <p>
+                Chopper de <strong>dos cuadrantes</strong> con <strong>dos transistores (Q1, Q2)</strong> y <strong>dos diodos 
+                (D1, D2)</strong>. Cuando Q1 + D2 conducen → operación motriz. Cuando Q2 + D1 conducen → <strong>frenado 
+                regenerativo</strong>. La tensión Vo siempre es positiva. Vc modela la fuerza contraelectromotriz del motor DC.
+                <br>
+                <span class="formula">Vo = D · V</span> &nbsp;
+                <span class="formula">io: + o −</span>
+            </p>`;
+    }
+
+    // ==================== UPDATE ====================
+    function updateDiagrams() {
+        if (currentSystem === 'B') {
+            circuitArea.innerHTML = circuitB();
+            quadrantArea.innerHTML = quadrantB();
+            conceptBox.innerHTML = conceptB();
+            tagCircuit.textContent = 'CLASE B';
+            tagQuadrant.textContent = 'CLASE B';
+        } else {
+            circuitArea.innerHTML = circuitC();
+            quadrantArea.innerHTML = quadrantC();
+            conceptBox.innerHTML = conceptC();
+            tagCircuit.textContent = 'CLASE C';
+            tagQuadrant.textContent = 'CLASE C';
+        }
+    }
+
+    function updateAll() {
+        duty = parseFloat(pairs.duty.slider.value) / 100;
+        freq = parseFloat(pairs.freq.slider.value);
+        vSource = parseFloat(pairs.vSource.slider.value);
+        vBat = parseFloat(pairs.vBat.slider.value);
+        inductance = parseFloat(pairs.inductance.slider.value);
+        resistance = parseFloat(pairs.resistance.slider.value) / 100;
+
+        pairs.duty.input.value = (duty * 100).toFixed(0);
+        pairs.freq.input.value = freq.toFixed(1);
+        pairs.vSource.input.value = vSource;
+        pairs.vBat.input.value = vBat;
+        pairs.inductance.input.value = inductance;
+        pairs.resistance.input.value = resistance.toFixed(2);
+
+        const L_H = inductance / 1000;
+        const vout = duty * vSource;
+        let iout = (vout - vBat) / resistance;
+        if (iout < 0) iout = 0;
+        const pout = vout * iout;
+        const pR = iout * iout * resistance;
+        const pVc = vBat * iout;
+        let ripple = (vout * (1 - duty)) / (freq * 0.6);
+        if (ripple > 8) ripple = 8;
+        const deltaI = (vSource * duty * (1 - duty)) / ((freq * 1000) * L_H);
+
+        voutDisplay.innerHTML = vout.toFixed(1) + '<span class="u">V</span>';
+        ioutDisplay.innerHTML = iout.toFixed(1) + '<span class="u">A</span>';
+        poutDisplay.innerHTML = pout.toFixed(0) + '<span class="u">W</span>';
+        rippleDisplay.innerHTML = ripple.toFixed(2) + '<span class="u">V</span>';
+
+        infoB.textContent = `${vSource}V / ${vBat}V · ${inductance}mH · ${resistance.toFixed(2)}Ω`;
+        infoC.textContent = `${vSource}V / ${vBat}V · ${inductance}mH · ${resistance.toFixed(2)}Ω`;
+
+        // Panel de cálculos
+        $('subD').textContent = `D = ${(duty*100).toFixed(0)}% = ${duty.toFixed(2)}`;
+        $('resD').textContent = duty.toFixed(2);
+
+        $('fVo').innerHTML = '$$V_o = D \\cdot V$$';
+        $('subVo').textContent = `Vo = ${duty.toFixed(2)} · ${vSource} = ${vout.toFixed(1)} V`;
+        $('resVo').textContent = vout.toFixed(1) + ' V';
+
+        $('fRip').innerHTML = '$$\\Delta I = \\frac{V \\cdot D \\cdot (1-D)}{f \\cdot L}$$';
+        $('subRip').textContent = `ΔI = (${vSource} · ${duty.toFixed(2)} · ${(1-duty).toFixed(2)}) / (${(freq*1000).toFixed(0)} · ${L_H}) = ${deltaI.toFixed(2)} A`;
+        $('resRip').textContent = deltaI.toFixed(2) + ' A';
+
+        $('subIo').textContent = `Io = (${vout.toFixed(1)} − ${vBat}) / ${resistance.toFixed(2)} = ${iout.toFixed(1)} A`;
+        $('resIo').textContent = iout.toFixed(1) + ' A';
+
+        $('subPo').textContent = `Po = ${vout.toFixed(1)} · ${iout.toFixed(1)} = ${pout.toFixed(0)} W`;
+        $('resPo').textContent = pout.toFixed(0) + ' W';
+
+        $('subPR').textContent = `PR = ${iout.toFixed(1)}² · ${resistance.toFixed(2)} = ${pR.toFixed(0)} W`;
+        $('resPR').textContent = pR.toFixed(0) + ' W';
+
+        $('subPVc').textContent = `PVc = ${vBat} · ${iout.toFixed(1)} = ${pVc.toFixed(0)} W`;
+        $('resPVc').textContent = pVc.toFixed(0) + ' W';
+
+        updateDiagrams();
+
+        if (window.MathJax && MathJax.typesetPromise) {
+            MathJax.typesetPromise([calcDrawer]).catch(() => {});
+        }
+
+        const now = new Date();
+        timestamp.textContent = now.toLocaleTimeString('es-ES', { hour12: false });
+    }
+
+    function bindPair(key) {
+        const p = pairs[key];
+        p.slider.addEventListener('input', () => {
+            const val = parseFloat(p.slider.value);
+            p.input.value = key === 'resistance' ? (val/100).toFixed(2) : val;
+            updateAll();
+        });
+        p.input.addEventListener('input', () => {
+            let val = parseFloat(p.input.value);
+            if (isNaN(val)) return;
+            const mn = parseFloat(p.input.min), mx = parseFloat(p.input.max);
+            if (val < mn) val = mn; if (val > mx) val = mx;
+            let sv = key === 'resistance' ? val * 100 : val;
+            if (sv < parseFloat(p.slider.min)) sv = parseFloat(p.slider.min);
+            if (sv > parseFloat(p.slider.max)) sv = parseFloat(p.slider.max);
+            p.slider.value = sv;
+            updateAll();
+        });
+        p.input.addEventListener('blur', () => updateAll());
+    }
+
+    function selectSystem(sys) {
+        currentSystem = sys;
+        if (sys === 'B') {
+            cardB.classList.add('active'); cardC.classList.remove('active');
+            activeSysLabel.textContent = 'CHOPPER CLASE B';
+            pairs.vSource.slider.value = 120; pairs.vBat.slider.value = 50;
+            pairs.inductance.slider.value = 10; pairs.resistance.slider.value = 25;
+        } else {
+            cardC.classList.add('active'); cardB.classList.remove('active');
+            activeSysLabel.textContent = 'CHOPPER CLASE C';
+            pairs.vSource.slider.value = 120; pairs.vBat.slider.value = 50;
+            pairs.inductance.slider.value = 10; pairs.resistance.slider.value = 25;
+        }
+        updateAll();
+    }
+
+    function toggleCalcDrawer() {
+        const open = calcDrawer.classList.contains('open');
+        if (open) {
+            calcDrawer.classList.remove('open');
+            overlay.classList.remove('show');
+            document.body.style.overflow = '';
+        } else {
+            calcDrawer.classList.add('open');
+            overlay.classList.add('show');
+            document.body.style.overflow = 'hidden';
+            if (window.MathJax && MathJax.typesetPromise) {
+                setTimeout(() => MathJax.typesetPromise([calcDrawer]).catch(() => {}), 100);
+            }
+        }
+    }
+
+    window.onload = function () {
+        Object.keys(pairs).forEach(bindPair);
+        selectSystem('B');
+        setInterval(() => {
+            timestamp.textContent = new Date().toLocaleTimeString('es-ES', { hour12: false });
+        }, 2000);
+    };
+
+    window.selectSystem = selectSystem;
+    window.toggleCalcDrawer = toggleCalcDrawer;
+</script>
+</body>
+</html>
